@@ -19,13 +19,11 @@ export const registerPair = async (req: Request, res: Response) => {
       player2Level,
     } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = await User.create({
       firstName: captainFirstName,
       lastName: captainLastName,
       email: captainEmail,
-      password: hashedPassword,
+      password: password,
     });
 
     const averageLevel = (captainLevel + player2Level) / 2;
