@@ -11,29 +11,38 @@ export const registerPair = async (req: Request, res: Response) => {
       captainFirstName,
       captainLastName,
       captainEmail,
+      captainPhone,
       password,
       captainLevel,
       player2FirstName,
       player2LastName,
       player2Email,
+      player2Phone,
       player2Level,
     } = req.body;
 
-    const newUser = await User.create({
+    const captainUser = await User.create({
       firstName: captainFirstName,
       lastName: captainLastName,
       email: captainEmail,
+      phone: captainPhone,
       password: password,
     });
 
-    const averageLevel = (captainLevel + player2Level) / 2;
+    const player2User = await User.create({
+      firstName: player2FirstName,
+      lastName: player2LastName,
+      email: player2Email,
+      phone: player2Phone,
+      password: "padelup_invitation_2026",
+    });
+
+    const averageLevel = (Number(captainLevel) + Number(player2Level)) / 2;
 
     const newPair = await Pair.create({
       teamName,
-      captain: newUser._id,
-      player2FirstName,
-      player2LastName,
-      player2Email,
+      captain: captainUser._id,
+      player2: player2User._id,
       captainLevel,
       player2Level,
       averageLevel,
@@ -42,14 +51,14 @@ export const registerPair = async (req: Request, res: Response) => {
     });
 
     res.status(201).json({
-      message: "Pair registered successfully",
+      message: "Registro completado. Pareja creada.",
       pairId: newPair._id,
     });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(400).json({
       error:
-        "Error registering the pair. Email or team name might already exist.",
+        "Error al registrar: El email, teléfono o nombre de equipo ya existen.",
     });
   }
 };
@@ -60,15 +69,17 @@ export const loginPair = async (req: Request, res: Response) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(400).json({ error: "Credenciales inválidas" });
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(400).json({ error: "Credenciales inválidas" });
     }
 
-    const pair = await Pair.findOne({ captain: user._id });
+    const pair = await Pair.findOne({
+      $or: [{ captain: user._id }, { player2: user._id }],
+    });
 
     const token = jwt.sign(
       { id: user._id, pairId: pair?._id },
@@ -83,10 +94,11 @@ export const loginPair = async (req: Request, res: Response) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone,
       },
       pair,
     });
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Error en el servidor" });
   }
 };

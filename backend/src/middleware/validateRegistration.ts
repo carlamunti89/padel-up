@@ -9,7 +9,7 @@ const registrationSchema = z.object({
     .min(3, "El nombre del equipo debe tener al menos 3 caracteres"),
   captainFirstName: z.string().min(2, "El nombre del capitán es obligatorio"),
   captainLastName: z.string().min(2, "El apellido del capitán es obligatorio"),
-
+  captainPhone: z.string().min(9, "Teléfono inválido"),
   captainEmail: z
     .string()
     .regex(emailRegex, { message: "Email del capitán inválido" }),
@@ -23,7 +23,7 @@ const registrationSchema = z.object({
   player2LastName: z
     .string()
     .min(2, "El apellido del jugador 2 es obligatorio"),
-
+  player2Phone: z.string().min(9),
   player2Email: z
     .string()
     .regex(emailRegex, { message: "Email del jugador 2 inválido" }),
