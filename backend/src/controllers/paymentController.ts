@@ -45,7 +45,7 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
         "http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "http://localhost:5173/dashboard",
 
-      metadata: { pairId },
+      metadata: { pairId }, // Aquí guardamos el ID para usarlo luego en el webhook
     });
 
     res.json({ url: session.url });
@@ -53,4 +53,32 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
     console.error("Error en Stripe:", error);
     res.status(500).json({ error: "No se pudo crear la sesión de pago" });
   }
+};
+
+// --- NUEVA FUNCIÓN AGREGADA ---
+export const handleStripeWebhook = async (req: Request, res: Response) => {
+  const sig = req.headers["stripe-signature"] as string;
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    // Verificamos que el evento es auténtico usando el secret del .env
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret || "");
+  } catch (err: any) {
+    console.error(`❌ Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Si el pago se completó correctamente
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as any;
+    const pairId = session.metadata.pairId;
+
+    // Actualizamos la pareja en MongoDB a pagado
+    await Pair.findByIdAndUpdate(pairId, { isPaid: true });
+    console.log(`✅ Pago confirmado y actualizado para la pareja: ${pairId}`);
+  }
+
+  res.json({ received: true });
 };
